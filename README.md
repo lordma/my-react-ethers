@@ -1,4 +1,4 @@
-# my first dapp
+# my react ethers
 
 技术栈：
 React + TypeScript + Vite + ethers
