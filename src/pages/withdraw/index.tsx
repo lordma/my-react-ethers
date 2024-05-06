@@ -14,7 +14,26 @@ const Withdraw : FC = () => {
     const [errorMessage, setErrorMessage] = useState("")
     const [successMessage, setSuccessMessage] = useState("")
 
-    
+    const connectMetamask = async () => {
+        // Check if MetaMask is installed
+        /* eslint @typescript-eslint/no-explicit-any: 0 */
+        const { ethereum } = window as any
+        if (ethereum) {
+            try {
+                // Request account access if needed
+                await ethereum.request({ method: 'eth_requestAccounts' })
+                // Instantiate ethers provider with Metamask provider
+                const provider = new ethers.BrowserProvider(ethereum)
+                return provider
+            } catch (error) {
+                console.error('User denied account access')
+                return null
+            }
+        } else {
+            console.error('MetaMask not detected');
+            return null
+        }
+    } 
 
     const handleWithdraw = async () => {
         console.log("from account :", accountInfo.account)
@@ -22,27 +41,34 @@ const Withdraw : FC = () => {
         console.log("amount :", withdrawAmountRef.current?.value)
         setErrorMessage("")
         setSuccessMessage("")
-          /* eslint @typescript-eslint/no-explicit-any: 0 */
-        const { ethereum } = window as any
-        if(ethereum){
-            const provider = new ethers.BrowserProvider(ethereum)
-            // Private Key
-            const signer = new ethers.Wallet("5615961f41826d96880dd409936f3b1915b1a4421dd322e3d631d7edf5eac7a6", provider);
-            signer.sendTransaction({to:withdrawAccountRef.current?.value??"", value: parseEther(withdrawAmountRef.current?.value?? "")}).then(reps => {
-                console.log(reps);
-                setErrorMessage("");
-                setSuccessMessage("withdraw successed!!!")
-            }).catch(error => {
-                console.log(error);
-                setErrorMessage("withdraw failed!!!")
-                setSuccessMessage("")
-            })
-        } else {
-            // connect failed show error message
-            setErrorMessage("error: Unable to Connect Wallet!!!");
+        // Connect to Metamask
+        const provider = await connectMetamask()
+        if (!provider) return
+
+        // Create signer
+        const signer = await provider.getSigner()
+
+        // Define transaction parameters
+        const txParams = {
+            to: withdrawAccountRef.current?.value??"",
+            value: parseEther(withdrawAmountRef.current?.value?? "")
         }
 
+        try {
+            // Send transaction
+            const txResponse = await signer.sendTransaction(txParams)
+            console.log("Transaction sent:", txResponse.hash)
+            setErrorMessage("")
+            setSuccessMessage("withdraw successed!!!")
+        } catch (error) {
+            console.error("Transaction failed:", error)
+            setErrorMessage("withdraw failed!!!")
+            setSuccessMessage("")
+        }
     }
+
+
+
     return (
         <Paper elevation={0}>
             <Box sx={{ border: "0px solid grey", width:"100vw" }}>
